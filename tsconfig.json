@@ -7,8 +7,6 @@
     "strict": true,
     "skipLibCheck": true,
 
-    "jsx": "preserve",
-
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false,
@@ -16,14 +14,12 @@
     "outDir": "dist",
     "sourceMap": true,
 
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022"],
 
     "types": ["vitest/globals", "node"]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.vue",
-    "src/**/*.d.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
