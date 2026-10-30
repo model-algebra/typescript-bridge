@@ -1,10 +1,14 @@
-import { Model } from "./Model";
+import type { ModelBridge, Model } from "model-algebra-common";
 
 type Field = Record<string, any>;
-export class TypescriptBridge {
+export class TypescriptBridge implements ModelBridge<Model, string> {
 
-    toTypescript(model: Model): string {
+    toTarget(model: Model): string {
         return `class ${model.metadata.name} {\n` + model.fields.map(field => this.convertField(field)).join('\n') + `\n}`;
+    }
+
+    toModel(_typescript: string): Model {
+        throw new Error("TypescriptBridge.toModel() is not implemented yet");
     }
 
     getConstraintProcessor(name: string, value: any): ConstraintProcessorI {
