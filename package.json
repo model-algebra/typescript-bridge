@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@types/node": "^25.2.3",
+    "model-algebra-common": "github:model-algebra/common-typescript",
     "vue": "^3.5.28",
     "vuetify": "^3.11.8"
   },
