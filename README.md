@@ -6,8 +6,11 @@ step.
 
 ## Installation
 
-The package isn't installable from GitHub as a dependency yet: `dist/` is not committed, and the package does not
-build itself when installed. Build it from a clone (see Development) and depend on that folder.
+```sh
+pnpm add github:model-algebra/typescript-bridge
+```
+
+The built package is in the repository, so nothing is built when it is installed.
 
 ## Usage
 
@@ -133,6 +136,15 @@ pnpm install
 pnpm test
 pnpm build
 ```
+
+`dist/` is committed, because other projects install the package from GitHub without building it. Enable the
+pre-commit hook once per clone; it rebuilds `dist/` and adds it to every commit that changes the sources:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+CI fails when the committed `dist/` differs from a build of the sources.
 
 The tests compile the generated code with the TypeScript compiler, for every valid example model.
 
