@@ -81,7 +81,7 @@ export class UserFactory {
 ## Options
 
 ```ts
-new TypescriptBridge({ class: true, factory: true, classSuffix: 'Entity', factorySuffix: 'Factory' })
+new TypescriptBridge({ class: true, factory: true, classSuffix: 'Entity', factorySuffix: 'Factory', dates: 'Date' })
 ```
 
 | Option | Default | |
@@ -90,6 +90,7 @@ new TypescriptBridge({ class: true, factory: true, classSuffix: 'Entity', factor
 | `factory` | `true` | Generate the factory; without the class, `build()` returns plain objects |
 | `classSuffix` | `Entity` | Appended to the model name for the class |
 | `factorySuffix` | `Factory` | Appended to the model name for the factory |
+| `dates` | `Date` | `'string'` types dates and times as the ISO 8601 strings JSON carries (`"2026-11-01"`, `"13:45:00"`, `"2026-11-01T13:45:00Z"`); `validate()` then checks that they parse, and compares them in rules |
 
 Model names become type names: `User db model` becomes `UserDbModel`.
 
@@ -101,7 +102,7 @@ Model names become type names: `User db model` becomes `UserDbModel`.
 | `STRING`, `TEXT`, `UUID`, `DURATION` (ISO 8601), `string` | `string` |
 | `BOOLEAN`, `boolean` | `boolean` |
 | `BYTES` | `Uint8Array` |
-| `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `TIMESTAMP_TZ`, `date` | `Date` |
+| `DATE`, `TIME`, `DATETIME`, `TIMESTAMP`, `TIMESTAMP_TZ`, `date` | `Date`, or `string` with `dates: 'string'` |
 | `ENUM` | Union of the values, e.g. `"ACTIVE" \| "INACTIVE"` |
 | `OBJECT` | The type of the referenced model, e.g. `Address` |
 | `UNION` | Union of the types it lists |

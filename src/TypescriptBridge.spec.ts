@@ -302,6 +302,50 @@ describe('generated validate()', () => {
     });
 });
 
+describe('string dates', () => {
+    const model = makeModel('Event', [
+        { name: 'day', type: 'DATE' },
+        { name: 'doors', type: 'TIME', constraints: { nullable: true } },
+        { name: 'closes', type: 'TIME', constraints: { nullable: true } },
+        { name: 'endsAt', type: 'TIMESTAMP_TZ', constraints: { nullable: true } },
+    ], {
+        constraints: [
+            { name: 'ck_day', type: 'check', rule: { field: 'day', op: '>=', value: '2020-01-01' } },
+            { name: 'ck_ends', type: 'check', rule: { field: 'endsAt', op: '>=', otherField: 'day' } },
+            { name: 'ck_doors', type: 'check', rule: { field: 'closes', op: '>', otherField: 'doors' } },
+        ],
+    });
+    const code = new TypescriptBridge({ dates: 'string' }).toTarget(model);
+    const { EventEntity } = load(code);
+    const valid = { day: '2026-11-01', doors: '18:00:00', closes: '23:30', endsAt: '2026-11-01T23:30:00Z' };
+    const errors = (changes: Record<string, any>) => new EventEntity({ ...valid, ...changes }).validate();
+
+    it('types dates and times as strings', () => {
+        expect(code).toContain('day: string;');
+        expect(code).toContain('endsAt: string | null;');
+        expect(typeErrors(code)).toEqual([]);
+    });
+
+    it('accepts valid ISO strings', () => {
+        expect(errors({})).toEqual([]);
+    });
+
+    it('rejects strings that are not dates or times', () => {
+        expect(errors({ day: 'tomorrow', doors: '6pm' })).toEqual(['day must be a valid date', 'doors must be a valid date']);
+    });
+
+    it('checks rules on dates and times', () => {
+        expect(errors({ day: '2019-12-31', endsAt: '2019-12-01T00:00:00Z' })).toEqual([
+            'ck_day failed: day >= "2020-01-01"', 'ck_ends failed: endsAt >= day',
+        ]);
+        expect(errors({ closes: '17:00:00' })).toEqual(['ck_doors failed: closes > doors']);
+    });
+
+    it('Date stays the default', () => {
+        expect(new TypescriptBridge().toTarget(model)).toContain('day: Date;');
+    });
+});
+
 describe('TypescriptBridge errors', () => {
     const bridge = new TypescriptBridge();
     const t = (fields: any[], extra?: Record<string, any>) => () => bridge.toTarget(makeModel('T', fields, extra));

@@ -9,6 +9,11 @@ export interface TypescriptBridgeOptions {
     classSuffix?: string;
     /** Appended to the model name to name the factory (default: "Factory"). */
     factorySuffix?: string;
+    /**
+     * How dates and times are typed: as Date objects (default), or as the ISO 8601 strings JSON carries, e.g.
+     * "2026-11-01" for DATE, "13:45:00" for TIME, "2026-11-01T13:45:00Z" for TIMESTAMP_TZ.
+     */
+    dates?: 'Date' | 'string';
 }
 
 type FieldData = Record<string, any>;
@@ -91,6 +96,7 @@ export class TypescriptBridge implements ModelBridge<Model, string> {
             factory: options.factory ?? true,
             classSuffix: options.classSuffix ?? 'Entity',
             factorySuffix: options.factorySuffix ?? 'Factory',
+            dates: options.dates ?? 'Date',
         };
     }
 
@@ -151,7 +157,7 @@ export class TypescriptBridge implements ModelBridge<Model, string> {
             case 'DATETIME':
             case 'TIMESTAMP':
             case 'TIMESTAMP_TZ':
-                return 'Date';
+                return this.options.dates === 'string' ? 'string' : 'Date';
             case 'JSON':
                 return 'unknown';
             case 'object':
@@ -247,7 +253,7 @@ export class TypescriptBridge implements ModelBridge<Model, string> {
                 });
         }
         if (DATE_TYPES.has(data.type))
-            violations.push({ condition: `Number.isNaN(${value}.getTime())`, message: `${name} must be a valid date` });
+            violations.push({ condition: this.invalidDate(data.type, value), message: `${name} must be a valid date` });
         if (data.type === 'STRING' && params.length !== undefined) {
             const length = numberLiteral(params.length, `Length of ${name}`);
             violations.push({ condition: `${value}.length > ${length}`, message: `${name} must be at most ${length} characters` });
@@ -327,15 +333,32 @@ export class TypescriptBridge implements ModelBridge<Model, string> {
         const field = this.ruleField(rule.field, fields, where);
         const other = rule.otherField !== undefined ? this.ruleField(rule.otherField, fields, where) : undefined;
         const isDate = DATE_TYPES.has(field.data.type);
-        const operand = (f: FieldInfo) => DATE_TYPES.has(f.data.type) ? `this.${f.name}.getTime()` : `this.${f.name}`;
+        const operand = (f: FieldInfo) => DATE_TYPES.has(f.data.type) ? this.dateValue(f.data.type, `this.${f.name}`) : `this.${f.name}`;
         const right = other !== undefined
             ? operand(other)
-            : isDate ? `new Date(${JSON.stringify(rule.value)}).getTime()` : JSON.stringify(rule.value);
+            : isDate ? this.dateValue(field.data.type, JSON.stringify(rule.value), true) : JSON.stringify(rule.value);
         // Missing values and invalid dates are reported by the field checks, not again by the rule
         const guards = [field, ...(other !== undefined ? [other] : [])].map(f => DATE_TYPES.has(f.data.type)
-            ? `this.${f.name} != null && !Number.isNaN(this.${f.name}.getTime())`
+            ? `this.${f.name} != null && !(${this.invalidDate(f.data.type, `this.${f.name}`)})`
             : `this.${f.name} != null`);
         return `${guards.join(' && ')} && !(${operand(field)} ${op} ${right})`;
+    }
+
+    /**
+     * Comparable value of a date: milliseconds since the epoch; with string dates, a TIME stays a string ("13:45:00"
+     * compares in order). A literal of a rule is always a string.
+     */
+    private dateValue(type: string, value: string, literal = false): string {
+        if (this.options.dates === 'Date' && !literal) return `${value}.getTime()`;
+        if (this.options.dates === 'string' && type === 'TIME') return value;
+        return literal ? `new Date(${value}).getTime()` : `Date.parse(${value})`;
+    }
+
+    /** Condition true when a date value is not a valid date. */
+    private invalidDate(type: string, value: string): string {
+        if (this.options.dates === 'Date') return `Number.isNaN(${value}.getTime())`;
+        if (type === 'TIME') return `!/^\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?$/.test(${value})`;
+        return `Number.isNaN(Date.parse(${value}))`;
     }
 
     private ruleField(name: string, fields: Map<string, FieldInfo>, where: string): FieldInfo {
